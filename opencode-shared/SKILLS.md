@@ -5,6 +5,7 @@ Bu liste ortak paketin içeriğidir. Laptop veya ofis PC'sine kurulmuş olduğun
 | Skill | İşlev | Kaynak | Sabit sürüm | Kullanım |
 | --- | --- | --- | --- | --- |
 | security-audit | Kod tabanında güvenlik açıklarını araştırır, bağımsız ajanlarla doğrular ve kanıta dayalı rapor üretir. | [Cloudflare](https://github.com/cloudflare/security-audit-skill) | c1c8a8c14710 | OpenCode içinde security-audit skill'ini yükleyerek güvenlik incelemesi iste. |
+| backup-and-restore-skills | Global, proje ve inceleme skill klasörlerini destek dosyalarıyla tek çevrimdışı ZIP'e toplar; format sonrasında geri yükler. | Bu ortak depo | Ortak depo sürümü | skills-backup ile arşiv oluştur; korunan ZIP'i python3 YEDEK.zip restore ile geri yükle. |
 
 Skill modeli zorunlu kılmaz. OpenCode içinde DeepSeek sağlayıcısını seç; alt ajanlara ayrı bir model atanmışsa onları da kontrol et.
 
@@ -21,3 +22,4 @@ Tam denetim için Node.js, alt ajan yetkileri ve kaynak koddan türetilen testle
 Liste global OpenCode, `.agents` ve `.claude` skill klasörlerini; belirtilen proje ve Git çalışma ağacı içindeki üst klasörlerdeki skill'leri tarar. Proje dışındaki başka repo'ları taramaz. Aynı adlı birden fazla skill'i belirtir. Liste dosya keşfini gösterir; OpenCode izinleri ve modelin skill'i yüklemesi ayrıca doğrulanmalıdır.
 
 Ortak paketin makineye bağlı olmayan içeriği `manifest.json` dosyasındadır. Bilgisayarda bulunan kişisel skill'ler ortak listeye kendiliğinden eklenmez.
+

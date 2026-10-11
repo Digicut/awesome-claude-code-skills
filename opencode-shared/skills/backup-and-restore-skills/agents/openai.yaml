@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skill Yedekleme ve Geri Yükleme"
+  short_description: "Skill dosyalarını tek arşivde koru ve yeniden kur"
+  default_prompt: "$backup-and-restore-skills ile tüm skill klasörlerimi yedekle veya koruduğum yedekten yeni bilgisayara geri yükle."

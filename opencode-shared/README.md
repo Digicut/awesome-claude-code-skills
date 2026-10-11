@@ -13,7 +13,7 @@ bash "$HOME/.local/share/digicut-opencode-skills/opencode-shared/setup.sh"
 
 Hedef klasör zaten varsa tekrar klonlama. İçindeki origin ve dalın bu kaynakla eşleştiğini doğrula; ardından setup.sh'yi çalıştır. Bu iki komut Windows PowerShell/CMD yerine OpenCode'un çalıştığı WSL terminalinde çalıştırılmalı.
 
-Kurulum, ortak skill'leri OpenCode'un global skill klasörüne bağlar. Bütün destek dosyaları resmi kaynak deposunun sabitlenmiş commit'inden indirilir. Skill kaynakları kullanıcının yerel veri klasöründe, kurulum durumu yerel durum klasöründe tutulur. XDG klasör ayarları varsa kullanılır.
+Kurulum, ortak skill'leri OpenCode'un global skill klasörüne bağlar. `security-audit` destek dosyaları resmi kaynağın sabitlenmiş commit'inden indirilir. `backup-and-restore-skills` bu ortak depoda bulunur. Skill kaynakları kullanıcının yerel veri klasöründe, kurulum durumu yerel durum klasöründe tutulur. XDG klasör ayarları varsa kullanılır.
 
 ## Her projede kullanım
 
@@ -29,6 +29,7 @@ Proje klasöründeyken:
 oc
 skills-list
 skills-sync
+skills-backup --device laptop
 device-record --device laptop
 ```
 
@@ -38,7 +39,7 @@ device-record --device laptop
 
 ## Güncelleme ve yeni skill ekleme
 
-Ortak paketin tek listesi `manifest.json` dosyasıdır. Yeni skill için adı, kaynak deposu, tam commit SHA, skill klasörü ve gereken dosyaları ekle; değişikliği bu dala commit/push et. Her iki bilgisayarda sonraki `oc` başlangıcı veya `skills-sync` çalıştırması yeni listeyi uygular.
+Ortak paketin listesi `manifest.json` dosyasıdır. Haricî skill için `skills` bölümüne adı, kaynak deposu, tam commit SHA, skill klasörü ve gereken dosyaları ekle. Bu depoda geliştirdiğimiz skilleri `bundled_skills` bölümünde tanımla. Değişikliği bu dala commit/push et. Her iki bilgisayarda sonraki `oc` başlangıcı veya `skills-sync` çalıştırması yeni listeyi uygular.
 
 Upstream'in latest sürümü kendiliğinden alınmaz. Güncellemeden önce sürümü incele, dene ve manifest'teki sabit commit'i değiştir. Ortak depoda veya kaynak skill'de yerel değişiklikler varsa otomatik üzerine yazılmaz. Yeni kaynak indirmesi başarısız olursa kurulu bağlantı değiştirilmez.
 
@@ -95,7 +96,7 @@ Okuma hataları veya tarama sınırı varsa raporda görünür. Repo checkout sa
 
 ## DeepSeek ve makineye özel bilgiler
 
-OpenCode içinde `/models` ile mevcut DeepSeek modelini seç. Skill kurulum araçları OpenCode model, API anahtarı veya kimlik doğrulama dosyalarını okumaz/kopyalamaz. Gerekiyorsa DeepSeek bağlantısını her bilgisayarda `/connect` üzerinden bir kez ayarla. SSH anahtarları ve Git kimlik doğrulaması makineye özeldir.
+OpenCode içinde `/models` ile mevcut DeepSeek modelini seç. Kurulum ve envanter araçları OpenCode model, API anahtarı veya kimlik doğrulama dosyalarını okumaz/kopyalamaz. Yedek aracı OpenCode JSON/JSONC dosyalarını `skills.paths` köklerini öğrenmek için okur; sağlayıcı, API anahtarı ve MCP ayarlarını arşive almaz. Gerekiyorsa DeepSeek bağlantısını her bilgisayarda `/connect` üzerinden bir kez ayarla. SSH anahtarları ve Git kimlik doğrulaması makineye özeldir.
 
 Bu düzen ortak skill'leri senkronlar. Proje kodu, veritabanları, `.env` ve geliştirme bağımlılıkları ayrıca kendi proje düzenleriyle yönetilir.
 
@@ -111,4 +112,33 @@ bash -n opencode-shared/record-device.sh
 
 Yerel testler kurulumun tekrar çalıştırılmasını, mevcut skill ve komutların korunmasını, yedekleme davranışını, başarısız indirmede mevcut bağlantının korunmasını ve komut argümanlarının aktarılmasını doğrular. Envanter testleri gerçek Git repoları/worktree'leriyle salt okunur taramayı, gizli bilgilerin rapora alınmamasını, skill konumlarını, tarama sınırlarını, bilinmeyen cihaz sayılarının korunmasını ve rapor birleştirme/geçmişini doğrular. Gerçek DeepSeek/OpenCode denetimi ayrıca yapılmalıdır.
 
+## Format sonrası tek dosyadan geri yükleme
+
+Laptopta tüm bulunan skill klasörlerini (global, proje ve inceleme koleksiyonları) destek dosyalarıyla paketle:
+
+```bash
+~/.local/bin/skills-backup --device laptop --output "$HOME/digicut-skills-yedek.zip"
+```
+
+Ortak kurulum henüz yapılmadıysa internet istemeyen bağımsız programı doğrudan çalıştır:
+
+```bash
+python3 "$HOME/.local/share/digicut-opencode-skills/opencode-shared/skills/backup-and-restore-skills/scripts/skills_backup.py" backup --device laptop --output "$HOME/digicut-skills-yedek.zip"
+```
+
+Bu komut yedekleme skill'ini de global kurar. Var olan aynı içerikli ortak skill bağlantısını korur. Eski `laptop.json` veya `office.json` envanterini otomatik olarak kontrol eder; eksik kayıtları bildirir. Yeni kaynaklar ve OpenCode `skills.paths` kökleri de taranır. Ek disk için `--root /mnt/d/projeler` ver. Dışarıya giden destek bağlantısını yalnızca kaynağını doğruladıktan sonra `--include-linked-root /kaynak/kökü` ile ekle.
+
+`Yedek doğrulandı` mesajından sonra ZIP'i NAS/USB/ofis bilgisayarına kopyala. Herhangi bir hata varsa arşiv eksik işaretlenir ve çıkış kodu 2 olur. Bu arşiv gerçek dosyaları, tam skill listesini ve geri yükleme programını taşır. Aynı isimdeki farklı klasör içerikleri ayrı korunur; aynı dosyalar depolamada tekilleştirilir. Yedeğin kendisi internetsiz çalışır:
+
+```bash
+python3 digicut-skills-yedek.zip list
+python3 digicut-skills-yedek.zip restore --dry-run
+python3 digicut-skills-yedek.zip restore
+```
+
+Yeni cihazda Linux/WSL ve Python 3.10+ gerekir. Önce OpenCode'u/haricî skill araçlarını kur ve projeleri klonla. Yeni kullanıcıya ev altındaki yollar otomatik taşınır; değişen kökler için `--map /eski/projeler=/yeni/projeler` ver. Mevcut farklı klasörlerin geri dönüş kopyaları korunur. İçerikte eski ev klasörünün mutlak yolu varsa raporda görünür; metin içi yolları ayrıca uyarla.
+
+Arşiv skill kaynaklarını korur. OpenCode/DeepSeek bağlantısı, MCP/plugin başlangıç kodu, API anahtarları, işletim sistemi, kurulu bağımlılıklar ve proje kodları kendi kurulumlarıyla yeniden hazırlanır. Arşiv özel skill içerikleri/yerel yollar içerebilir; herkese açık repo yerine kişisel yedek olarak sakla. Laptop ve ofiste ayrı yedek adları kullan. Skill ekleme/güncelleme sonrası yeni ZIP al.
+
 Skill listesi: [SKILLS.md](SKILLS.md).
+

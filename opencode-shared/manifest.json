@@ -12,5 +12,14 @@
       "required_files": ["SKILL.md", "RECONNAISSANCE.md", "HUNTING.md", "ATTACK-CLASSES.md", "VALIDATION-AND-REPORTING.md", "report-schema.json", "validate-findings.cjs", "validate-coverage-ledger.cjs"],
       "license": "MIT"
     }
+  ],
+  "bundled_skills": [
+    {
+      "name": "backup-and-restore-skills",
+      "description_tr": "Tüm skill klasörlerini destek dosyalarıyla tek çevrimdışı ZIP'te yedekler ve format sonrasında yeni kullanıcıya geri yükler.",
+      "source_path": "skills/backup-and-restore-skills",
+      "required_files": ["SKILL.md", "scripts/skills_backup.py", "references/restore.md"]
+    }
   ]
 }
+

@@ -22,6 +22,7 @@ class SetupTests(unittest.TestCase):
         self.package = self.root / "package"
         self.package.mkdir()
         shutil.copy2(ROOT / "manifest.json", self.package / "manifest.json")
+        shutil.copytree(ROOT / "skills", self.package / "skills")
         self.paths = skills.locations(self.home)
         self.source = self.paths["cache"] / "security-audit" / ("c" * 40) / "skills/security-audit"
         self.source.mkdir(parents=True)
@@ -54,6 +55,21 @@ class SetupTests(unittest.TestCase):
             self.apply()
         self.assertEqual(sentinel.read_text(), "keep")
         self.assertFalse(self.paths["state"].exists())
+
+    def test_bundled_skill_is_installed_with_offline_backup_command(self):
+        self.apply()
+        target = self.paths["skills"] / "backup-and-restore-skills"
+        self.assertTrue(target.is_symlink())
+        self.assertTrue((target / "scripts/skills_backup.py").is_file())
+        self.assertEqual(target.resolve(), (self.package / "skills/backup-and-restore-skills").resolve())
+
+    def test_bundled_skill_escape_rejected_before_link_changes(self):
+        data = skills.manifest(self.package)
+        data["bundled_skills"][0]["source_path"] = "../outside"
+        (self.package / "manifest.json").write_text(json.dumps(data))
+        with self.assertRaises(ValueError):
+            self.apply()
+        self.assertFalse(self.paths["skills"].exists())
 
     def test_explicit_adoption_retains_backup(self):
         target = self.paths["skills"] / "security-audit"
@@ -151,3 +167,4 @@ class SetupTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

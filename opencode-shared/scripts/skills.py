@@ -66,6 +66,15 @@ def manifest(package=PACKAGE):
             path = Path(relative)
             if path.is_absolute() or ".." in path.parts or not path.parts:
                 raise ValueError("Skill dosya yolu geçersiz.")
+    for entry in data.get("bundled_skills", []):
+        name = entry["name"]
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) or len(name) > 64 or name in seen:
+            raise ValueError("Paket içi skill adı geçersiz veya tekrarlanmış.")
+        seen.add(name)
+        for relative in [entry["source_path"], *entry["required_files"]]:
+            path = Path(relative)
+            if path.is_absolute() or ".." in path.parts or not path.parts:
+                raise ValueError("Paket içi skill dosya yolu geçersiz.")
     return data
 
 
@@ -142,14 +151,26 @@ def source_directory(entry, paths):
     return skill.resolve()
 
 
-def check_links(entries, paths, state, adopt=False):
+def bundled_directory(entry, package):
+    skill = package / entry["source_path"]
+    if not skill.is_dir() or not skill.resolve().is_relative_to(package.resolve()):
+        raise ValueError("Paket içi skill kaynağı bulunamadı veya paket dışında.")
+    for file in entry["required_files"]:
+        if not (skill / file).is_file() or not (skill / file).resolve().is_relative_to(skill.resolve()):
+            raise ValueError("Paket içi skill dosyası eksik veya klasör dışında: " + file)
+    if metadata((skill / "SKILL.md").read_text(encoding="utf-8"))["name"] != entry["name"]:
+        raise ValueError("Paket içi skill adı kaynakla uyuşmuyor.")
+    return skill.resolve()
+
+
+def check_links(entries, paths, state, adopt=False, package=PACKAGE):
     for entry in entries:
         target = paths["skills"] / entry["name"]
         if not os.path.lexists(target):
             continue
         previous = state["managed_links"].get(entry["name"])
         managed = target.is_symlink() and previous and target.resolve() == Path(previous).resolve()
-        expected = paths["cache"] / entry["name"] / entry["source_commit"] / entry["source_path"]
+        expected = package / entry["source_path"] if entry.get("bundled") else paths["cache"] / entry["name"] / entry["source_commit"] / entry["source_path"]
         managed = managed or (target.is_symlink() and target.resolve() == expected.resolve())
         if not managed and not adopt:
             raise ValueError("Mevcut skill korunuyor: " + str(target) +
@@ -160,10 +181,12 @@ def _sync(package=PACKAGE, home=None, adopt=False):
     data = manifest(package)
     paths = locations(home)
     state = read_state(paths["state"])
-    check_links(data["skills"], paths, state, adopt)
+    entries = [*data["skills"], *[{**entry, "bundled": True} for entry in data.get("bundled_skills", [])]]
+    check_links(entries, paths, state, adopt, package)
     sources = {entry["name"]: source_directory(entry, paths) for entry in data["skills"]}
+    sources.update({entry["name"]: bundled_directory(entry, package) for entry in data.get("bundled_skills", [])})
     paths["skills"].mkdir(parents=True, exist_ok=True)
-    for entry in data["skills"]:
+    for entry in entries:
         target = paths["skills"] / entry["name"]
         source = sources[entry["name"]]
         if target.is_symlink() and target.resolve() == source:
@@ -185,6 +208,7 @@ def _sync(package=PACKAGE, home=None, adopt=False):
                 temporary.unlink()
     state["managed_links"].update({name: str(path) for name, path in sources.items()})
     state["source_commits"] = {entry["name"]: entry["source_commit"] for entry in data["skills"]}
+    state["bundled_sources"] = {entry["name"]: entry["source_path"] for entry in data.get("bundled_skills", [])}
     state["controller"] = str(package.parent.resolve())
     state["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
     atomic_json(paths["state"], state)
@@ -251,6 +275,7 @@ def wrappers(paths, script, write=False):
     contents = {
         "oc": "launch", "skills-sync": "update", "skills-list": "list",
         "device-record": "record", "device-import": "import-inventory",
+        "skills-backup": "backup", "skills-restore": "restore",
     }
     for name, subcommand in contents.items():
         target = paths["bin"] / name
@@ -295,6 +320,9 @@ def launch(arguments):
 
 
 def main():
+    if sys.argv[1:2] in (["backup"], ["restore"]):
+        backup_tool = PACKAGE / "skills/backup-and-restore-skills/scripts/skills_backup.py"
+        os.execv(sys.executable, [sys.executable, str(backup_tool), *sys.argv[1:]])
     if sys.argv[1:2] in (["record"], ["import-inventory"]):
         import device_inventory
         command = "record" if sys.argv[1] == "record" else "import"
@@ -329,6 +357,8 @@ def main():
     print("Ortak skill paketi eşitlendi:")
     for entry in data["skills"]:
         print("- " + entry["name"] + " @ " + entry["source_commit"][:12])
+    for entry in data.get("bundled_skills", []):
+        print("- " + entry["name"] + " @ ortak depo")
     if args.command == "install":
         paths = locations(args.home)
         wrappers(paths, Path(__file__).resolve(), write=True)
@@ -347,3 +377,4 @@ if __name__ == "__main__":
         # Do not print captured Git stderr: URLs can contain credentials in user configs.
         print("Kurulum/eşitleme tamamlanamadı: " + (str(error) if isinstance(error, ValueError) else type(error).__name__), file=sys.stderr)
         sys.exit(1)
+
