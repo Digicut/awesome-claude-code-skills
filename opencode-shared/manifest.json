@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "shared_repository": "https://github.com/Digicut/awesome-claude-code-skills.git",
+  "shared_branch": "opencode-shared-skills",
+  "skills": [
+    {
+      "name": "security-audit",
+      "description_tr": "Kod tabanında güvenlik açıklarını araştırır, ayrı ajanlarla doğrular ve kanıta dayalı rapor üretir.",
+      "source": "https://github.com/cloudflare/security-audit-skill.git",
+      "source_commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "source_path": "skills/security-audit",
+      "required_files": ["SKILL.md", "RECONNAISSANCE.md", "HUNTING.md", "ATTACK-CLASSES.md", "VALIDATION-AND-REPORTING.md", "report-schema.json", "validate-findings.cjs", "validate-coverage-ledger.cjs"],
+      "license": "MIT"
+    }
+  ]
+}
