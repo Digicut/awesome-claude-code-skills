@@ -29,6 +29,7 @@ Proje klasöründeyken:
 oc
 skills-list
 skills-sync
+device-record --device laptop
 ```
 
 `oc`, güncellemeden sonra gerçek `opencode` komutunu aynı proje klasöründe ve verilen argümanlarla başlatır. İnternet veya Git güncellemesi başarısızsa uyarı verir ve mevcut yerel kurulumla devam eder. Doğrudan `opencode` ile açmak da skill'leri kullanır fakat başlangıçta ortak kaynak eşitlemesi yapmaz.
@@ -49,7 +50,48 @@ Aynı adlı yönetilmeyen bir skill varsa kurulum durur ve konumunu gösterir. O
 bash "$HOME/.local/share/digicut-opencode-skills/opencode-shared/setup.sh" --adopt-existing
 ```
 
-Yedek yolu yazdırılır. Kaynak dosyalar silinmez. Daha önce bu sistemin yönetmediği `oc`, `skills-list` veya `skills-sync` komutları varsa üzerine yazılmaz.
+Yedek yolu yazdırılır. Kaynak dosyalar silinmez. Daha önce bu sistemin yönetmediği `oc`, `skills-list`, `skills-sync`, `device-record` veya `device-import` komutları varsa üzerine yazılmaz.
+
+## Laptop ve ofis repo/skill kaydı
+
+`devices.json` ortak cihaz adlarını tanımlar: `laptop` ve `office`. Gerçek disk listeleri bir tarama yapıldıktan sonra kayıt edilir; taranmamış bir cihazın sayıları sıfır olarak gösterilmez.
+
+Envanter aracı bütün bulunan Git checkout/worktree konumlarını, origin repo kimliğini, dalı, commit'i, yerel değişiklik durumunu ve global/proje skill dosyalarını listeler. Git durumunu optional locks kapalı alır. Proje dosyaları, Git indeksi ve ayarları değiştirilmez. `.env`, API anahtarları, SSH anahtarları ve OpenCode auth dosyaları okunmaz. Remote adreslerinden kullanıcı adı/parola/query çıkarılır; raporda host ve repo kimliği bulunur.
+
+Ortak depoyu güncelledikten sonra laptopta:
+
+```bash
+bash "$HOME/.local/share/digicut-opencode-skills/opencode-shared/record-device.sh" laptop
+```
+
+Ofiste aynı komutta `laptop` yerine `office` kullan. Bu başlatıcı WSL ana klasörünü, ortak araç deposunu ve varsa `/mnt/c/Users` altını tarar. Başka disk veya klasör için `--root /mnt/d/projeler` ekleyebilirsin. Dizin symlink'leri, gizli/cache/bağımlılık klasörleri atlanır; symlink'li bir proje için gerçek yolunu ayrıca `--root` ile ver. Global skill bağlantıları ayrıca okunur. Tarama kökleri ve sınırları rapora yazılır. Windows kullanıcı klasörlerindeki `.agents/skills`, `.claude/skills` ve `.config/opencode/skills` de bulunur; bu dosyaların WSL OpenCode tarafından yüklenmesi ayrıca değerlendirilir.
+
+İlk kurulumu yapmadan da güncel kaynak deposundaki `record-device.sh` çalıştırılabilir. Python ve Git yeterli; bir skill veya DeepSeek oturumu başlatmaz.
+
+Raporlar varsayılan olarak `$HOME/.local/share/digicut-environment/inventory/` altındadır (XDG_DATA_HOME varsa ona göre):
+
+- `laptop.json` / `laptop.md`: laptopun en son taraması.
+- `office.json` / `office.md`: ofis bilgisayarının en son taraması.
+- `registry.json` / `registry.md`: bu klasördeki iki cihazı aynı listede toplar.
+- `history/`: yenilenen önceki cihaz kayıtları korunur.
+
+Bu raporlar herkese açık ortak Git deposuna gönderilmez. Raporları aynı özel klasöre getirerek veya JSON dosyasını buradan paylaşarak tek kayıt defterinde toplamak mümkündür. Cihazlar arasında gerçek envanter eşitlemesi bu aşamada elle yapılır; ortak araç ve skill tanımları Git üzerinden güncellenir.
+
+Kurulumdan sonra kısayollar:
+
+```bash
+~/.local/bin/device-record --device laptop --root /mnt/c/Users
+~/.local/bin/device-import /bir/yerden/office.json
+```
+
+Kısayollar yoksa doğrudan Python aracı:
+
+```bash
+python3 opencode-shared/scripts/device_inventory.py record --device laptop --root /mnt/c/Users
+python3 opencode-shared/scripts/device_inventory.py import /bir/yerden/office.json
+```
+
+Okuma hataları veya tarama sınırı varsa raporda görünür. Repo checkout sayısı aynı repoya ait birden fazla worktree içerir; skill konumu sayısı aynı adlı birden fazla skill dosyası içerebilir. Dosya keşfi OpenCode izinlerini veya modelin skill'i gerçekten yüklediğini kanıtlamaz.
 
 ## DeepSeek ve makineye özel bilgiler
 
@@ -64,8 +106,9 @@ Kurulum: Linux/WSL, Python 3, Git ve ilk indirme için GitHub erişimi. OpenCode
 ```bash
 python3 -m unittest discover -s opencode-shared/tests -v
 bash -n opencode-shared/setup.sh
+bash -n opencode-shared/record-device.sh
 ```
 
-Yerel testler kurulumun tekrar çalıştırılmasını, mevcut skill ve komutların korunmasını, yedekleme davranışını, başarısız indirmede mevcut bağlantının korunmasını, komut argümanlarının aktarılmasını ve proje tarama kapsamını doğrular. Gerçek DeepSeek/OpenCode denetimi ayrıca yapılmalıdır.
+Yerel testler kurulumun tekrar çalıştırılmasını, mevcut skill ve komutların korunmasını, yedekleme davranışını, başarısız indirmede mevcut bağlantının korunmasını ve komut argümanlarının aktarılmasını doğrular. Envanter testleri gerçek Git repoları/worktree'leriyle salt okunur taramayı, gizli bilgilerin rapora alınmamasını, skill konumlarını, tarama sınırlarını, bilinmeyen cihaz sayılarının korunmasını ve rapor birleştirme/geçmişini doğrular. Gerçek DeepSeek/OpenCode denetimi ayrıca yapılmalıdır.
 
 Skill listesi: [SKILLS.md](SKILLS.md).

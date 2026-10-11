@@ -250,6 +250,7 @@ def show_inventory(home=None, project=None, as_json=False):
 def wrappers(paths, script, write=False):
     contents = {
         "oc": "launch", "skills-sync": "update", "skills-list": "list",
+        "device-record": "record", "device-import": "import-inventory",
     }
     for name, subcommand in contents.items():
         target = paths["bin"] / name
@@ -294,6 +295,11 @@ def launch(arguments):
 
 
 def main():
+    if sys.argv[1:2] in (["record"], ["import-inventory"]):
+        import device_inventory
+        command = "record" if sys.argv[1] == "record" else "import"
+        device_inventory.main([command, *sys.argv[2:]])
+        return
     if sys.argv[1:2] == ["launch"]:
         launch(sys.argv[2:])
         return
